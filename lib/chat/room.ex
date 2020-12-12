@@ -164,7 +164,7 @@ defmodule Chat.Room do
     {:via, Registry, {RoomRegistry, room_name}}
   end
 
-  defp convert_to_public_name(room_name) do
+  def convert_to_public_name(room_name) do
     if room_name =~ "@public" do
       room_name
     else
@@ -172,7 +172,7 @@ defmodule Chat.Room do
     end
   end
 
-  defp convert_to_private_name(room_name) do
+  def convert_to_private_name(room_name) do
     if room_name =~ "@private" do
       room_name
     else

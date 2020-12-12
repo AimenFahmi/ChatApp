@@ -190,33 +190,37 @@ defmodule Chat.Server.Command do
 
   def run(socket, {:create_public_room, room_name}) do
     me = Chat.get_user_by_socket(socket)
+    actual_room_name = Chat.Room.convert_to_public_name(room_name)
 
     case Chat.Room.start_link(room_name, me, "public") do
       {:error, :room_already_exists} ->
         {:ok,
          format_for_room_messages(
-           room_name,
-           "Name '#{room_name <> "@public"}' is taken by an already existing public room."
+           actual_room_name,
+           "Name '#{actual_room_name}' is taken by an already existing public room."
          )}
 
       _ ->
-        {:ok, format_for_room_messages(room_name, "Created public room '#{room_name}'")}
+        {:ok,
+         format_for_room_messages(actual_room_name, "Created public room '#{actual_room_name}'")}
     end
   end
 
   def run(socket, {:create_private_room, room_name}) do
     me = Chat.get_user_by_socket(socket)
+    actual_room_name = Chat.Room.convert_to_private_name(room_name)
 
     case Chat.Room.start_link(room_name, me, "private") do
       {:error, :room_already_exists} ->
         {:ok,
          format_for_room_messages(
-           room_name,
-           "Name '#{room_name <> "@private"}' is taken by an already existing private room."
+           actual_room_name,
+           "Name '#{actual_room_name}' is taken by an already existing private room."
          )}
 
       _ ->
-        {:ok, format_for_room_messages(room_name, "Created private room '#{room_name}'")}
+        {:ok,
+         format_for_room_messages(actual_room_name, "Created private room '#{actual_room_name}'")}
     end
   end
 
