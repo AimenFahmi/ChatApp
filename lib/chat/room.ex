@@ -125,7 +125,7 @@ defmodule Chat.Room do
   end
 
   def is_member_by_number?(room_name, user_number) do
-    Enum.find(members(room_name), fn member -> member.user_number == user_number end) != []
+    Enum.any?(members(room_name), fn member -> member.user_number == user_number end)
   end
 
   def is_admin?(room_name, member) do

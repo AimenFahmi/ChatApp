@@ -72,34 +72,43 @@ defmodule Chat.Server.Command do
         user ->
           members = Router.route(room_name, Chat.Room, :members, [room_name])
 
-          if room_name =~ "@private" do
-            Chat.Room.add_member(room_name, user)
-            admin = Chat.Room.admin(room_name)
-            description = Chat.Room.description(room_name)
+          if !Router.is_member_by_number?(room_name, user_number) do
+            if room_name =~ "@private" do
+              Chat.Room.add_member(room_name, user)
+              admin = Chat.Room.admin(room_name)
+              description = Chat.Room.description(room_name)
 
-            Router.route_to(user.node_name, Chat.Room, :start_link, [
-              room_name,
-              admin,
-              "private",
-              description,
-              List.delete([user | members], admin)
-            ])
+              Router.route_to(user.node_name, Chat.Room, :start_link, [
+                room_name,
+                admin,
+                "private",
+                description,
+                List.delete(members, admin)
+              ])
 
-            {:ok,
-             formatted_response(
-               "Added member '#{inspect({user.user_name, user.user_number})}' to room '#{
-                 room_name
-               }' and started a copy of the room on node #{user.node_name}"
-             ), [user | members]}
+              Router.apply_to_all_members(room_name, Chat.Room, :add_member, [room_name, user])
+
+              {:ok,
+               formatted_response(
+                 "Added member '#{inspect({user.user_name, user.user_number})}' to room '#{
+                   room_name
+                 }' and started a copy of the room on node #{user.node_name}"
+               ), [user | members]}
+            else
+              Router.route(room_name, Chat.Room, :add_member, [room_name, user])
+
+              {:ok,
+               formatted_response(
+                 "Added member '#{inspect({user.user_name, user.user_number})}' to room '#{
+                   room_name
+                 }'"
+               ), [user | members]}
+            end
           else
-            Router.route(room_name, Chat.Room, :add_member, [room_name, user])
-
             {:ok,
              formatted_response(
-               "Added member '#{inspect({user.user_name, user.user_number})}' to room '#{
-                 room_name
-               }'"
-             ), [user | members]}
+               "User '#{user_number}' is already a member of the room '#{room_name}'"
+             )}
           end
       end
     else
@@ -285,7 +294,7 @@ defmodule Chat.Server.Command do
     me = Chat.get_user_by_socket(socket)
 
     if Router.is_member?(room_name, me) do
-      {:ok, "#{me.user_name}: " <> message <> "\r\n",
+      {:ok, "#{me.user_name} (#{room_name}): " <> message <> "\r\n",
        Router.route(room_name, Chat.Room, :members, [room_name])}
     else
       {:ok,
@@ -341,8 +350,11 @@ defmodule Chat.Server.Command do
     private_rooms = Chat.rooms()
 
     for private_room <- private_rooms,
-        Router.is_member_by_number?(private_room, me.user_number) do
-      Router.apply_to_all_members(private_room, Chat.Room, :update_member, [private_room, me])
+        Router.is_member_by_number?(private_room.room_name, me.user_number) do
+      Router.apply_to_all_members(private_room.room_name, Chat.Room, :update_member, [
+        private_room.room_name,
+        me
+      ])
     end
 
     Logger.info("Updated: #{inspect([private_rooms | room_names])}")

@@ -65,6 +65,10 @@ defmodule Chat.Server.Router do
   end
 
   def is_member_by_number?(room_name, user_number) do
-    route(room_name, Chat.Room, :is_member_by_number?, [room_name, user_number])
+    if room_name =~ "@private" do
+      Chat.Room.is_member_by_number?(room_name, user_number)
+    else
+      route(room_name, Chat.Room, :is_member_by_number?, [room_name, user_number])
+    end
   end
 end
