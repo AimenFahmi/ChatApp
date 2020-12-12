@@ -79,23 +79,34 @@ defmodule Chat.Server.Command do
               Router.route(room_name, Chat.Room, :remove_member, [room_name, user])
             end
 
-            {:ok, formatted_response("Removed user '#{user_number}' from room '#{room_name}'")}
+            {:ok,
+             format_for_room_messages(
+               room_name,
+               "Removed user '#{user_number}' from room '#{room_name}'"
+             )}
           else
-            {:ok, formatted_response("User '#{user_number}' does not exist")}
+            {:ok, format_for_room_messages(room_name, "User '#{user_number}' does not exist")}
           end
         else
           {:ok,
-           formatted_response("If you want to leave the room please use: ROOM #{room_name} LEAVE")}
+           format_for_room_messages(
+             room_name,
+             "If you want to leave the room please use: ROOM #{room_name} LEAVE"
+           )}
         end
       else
         {:ok,
-         formatted_response(
+         format_for_room_messages(
+           room_name,
            "You cannot remove a member because you are not the admin of this room"
          )}
       end
     else
       {:ok,
-       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
+       format_for_room_messages(
+         room_name,
+         "You are not a member of '#{room_name}' or the room does not exist"
+       )}
     end
   end
 
@@ -105,7 +116,7 @@ defmodule Chat.Server.Command do
     if Router.is_member?(room_name, me) do
       case Chat.User.get_user(user_number) do
         {:error, :user_not_found} ->
-          {:ok, formatted_response("User '#{user_number}' does not exist")}
+          {:ok, format_for_room_messages(room_name, "User '#{user_number}' does not exist")}
 
         user ->
           members = Router.route(room_name, Chat.Room, :members, [room_name])
@@ -127,7 +138,8 @@ defmodule Chat.Server.Command do
               Router.apply_to_all_members(room_name, Chat.Room, :add_member, [room_name, user])
 
               {:ok,
-               formatted_response(
+               format_for_room_messages(
+                 room_name,
                  "Added member '#{inspect({user.user_name, user.user_number})}' to room '#{
                    room_name
                  }' and started a copy of the room on node #{user.node_name}"
@@ -136,7 +148,8 @@ defmodule Chat.Server.Command do
               Router.route(room_name, Chat.Room, :add_member, [room_name, user])
 
               {:ok,
-               formatted_response(
+               format_for_room_messages(
+                 room_name,
                  "Added member '#{inspect({user.user_name, user.user_number})}' to room '#{
                    room_name
                  }'"
@@ -144,21 +157,28 @@ defmodule Chat.Server.Command do
             end
           else
             {:ok,
-             formatted_response(
+             format_for_room_messages(
+               room_name,
                "User '#{user_number}' is already a member of the room '#{room_name}'"
              )}
           end
       end
     else
       {:ok,
-       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
+       format_for_room_messages(
+         room_name,
+         "You are not a member of '#{room_name}' or the room does not exist"
+       )}
     end
   end
 
   def run(socket, {:login, user_number, user_name}) do
     case Chat.User.start_link(user_number, user_name, node(), socket) do
-      {:error, :user_already_logged_in} -> {:ok, formatted_response("You are already logged in")}
-      _ -> {:ok, formatted_response("We welcome the glorious #{user_name} !")}
+      {:error, :user_already_logged_in} ->
+        {:ok, formatted_response("You are already logged in")}
+
+      _ ->
+        {:ok, formatted_response("We welcome the glorious #{user_name} !")}
     end
   end
 
@@ -168,10 +188,13 @@ defmodule Chat.Server.Command do
     case Chat.Room.start_link(room_name, me, "public") do
       {:error, :room_already_exists} ->
         {:ok,
-         formatted_response("Name '#{room_name}' is taken by an already existing public room.")}
+         format_for_room_messages(
+           room_name,
+           "Name '#{room_name}' is taken by an already existing public room."
+         )}
 
       _ ->
-        {:ok, formatted_response("Created public room '#{room_name}'")}
+        {:ok, format_for_room_messages(room_name, "Created public room '#{room_name}'")}
     end
   end
 
@@ -181,29 +204,33 @@ defmodule Chat.Server.Command do
     case Chat.Room.start_link(room_name, me, "private") do
       {:error, :room_already_exists} ->
         {:ok,
-         formatted_response("Name '#{room_name}' is taken by an already existing private room.")}
+         format_for_room_messages(
+           room_name,
+           "Name '#{room_name}' is taken by an already existing private room."
+         )}
 
       _ ->
-        {:ok, formatted_response("Created private room '#{room_name}'")}
+        {:ok, format_for_room_messages(room_name, "Created private room '#{room_name}'")}
     end
   end
 
   def run(socket, {:join_room, room_name}) do
     if room_name =~ "@private" do
-      {:ok, formatted_response("You can't join a private room")}
+      {:ok, format_for_room_messages(room_name, "You can't join a private room")}
     else
       me = Chat.get_user_by_socket(socket)
 
       case Router.route(room_name, Chat.Room, :add_member, [room_name, me]) do
         {:error, :member_already_exists} ->
-          {:ok, formatted_response("You are already a member of '#{room_name}'")}
+          {:ok, format_for_room_messages(room_name, "You are already a member of '#{room_name}'")}
 
         {:error, :room_not_found} ->
-          {:ok, formatted_response("Room '#{room_name}' does not exist")}
+          {:ok, format_for_room_messages(room_name, "Room '#{room_name}' does not exist")}
 
         _ ->
           {:ok,
-           formatted_response(
+           format_for_room_messages(
+             room_name,
              "Added member '#{inspect({me.user_name, me.user_number})}' to room '#{room_name}'"
            ), Router.route(room_name, Chat.Room, :members, [room_name])}
       end
@@ -232,7 +259,8 @@ defmodule Chat.Server.Command do
             ])
 
             {:ok,
-             formatted_response(
+             format_for_room_messages(
+               room_name,
                "Removed member '#{inspect({me.user_name, me.user_number})}' from room '#{
                  room_name
                }'. The admin has been updated to #{inspect(new_admin.node_name)}"
@@ -257,7 +285,8 @@ defmodule Chat.Server.Command do
             ])
 
             {:ok,
-             formatted_response(
+             format_for_room_messages(
+               room_name,
                "Removed member '#{inspect({me.user_name, me.user_number})}' from room '#{
                  room_name
                }' and since the latter was the admin, the room has been moved to node #{
@@ -266,7 +295,8 @@ defmodule Chat.Server.Command do
              ), members}
           else
             {:ok,
-             formatted_response(
+             format_for_room_messages(
+               room_name,
                "Removed member '#{inspect({me.user_name, me.user_number})}' from room '#{
                  room_name
                }'"
@@ -276,7 +306,10 @@ defmodule Chat.Server.Command do
       end
     else
       {:ok,
-       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
+       format_for_room_messages(
+         room_name,
+         "You are not a member of '#{room_name}' or the room does not exist"
+       )}
     end
   end
 
@@ -295,17 +328,23 @@ defmodule Chat.Server.Command do
         end
 
         {:ok,
-         formatted_response("Description of room '#{room_name}' was set to '#{new_description}'"),
-         Router.route(room_name, Chat.Room, :members, [room_name])}
+         format_for_room_messages(
+           room_name,
+           "Description of room '#{room_name}' was set to '#{new_description}'"
+         ), Router.route(room_name, Chat.Room, :members, [room_name])}
       else
         {:ok,
-         formatted_response(
+         format_for_room_messages(
+           room_name,
            "You can't set the description because you are not the admin of this room"
          )}
       end
     else
       {:ok,
-       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
+       format_for_room_messages(
+         room_name,
+         "You are not a member of '#{room_name}' or the room does not exist"
+       )}
     end
   end
 
@@ -315,11 +354,17 @@ defmodule Chat.Server.Command do
     if Router.is_member?(room_name, me) do
       description = Router.route(room_name, Chat.Room, :description, [room_name])
 
-      {:ok, formatted_response("Description of room '#{room_name}' is '#{description}'"),
-       Router.route(room_name, Chat.Room, :members, [room_name])}
+      {:ok,
+       format_for_room_messages(
+         room_name,
+         "Description of room '#{room_name}' is '#{description}'"
+       ), Router.route(room_name, Chat.Room, :members, [room_name])}
     else
       {:ok,
-       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
+       format_for_room_messages(
+         room_name,
+         "You are not a member of '#{room_name}' or the room does not exist"
+       )}
     end
   end
 
@@ -328,10 +373,13 @@ defmodule Chat.Server.Command do
 
     if Router.is_member?(room_name, me) do
       members = Router.route(room_name, Chat.Room, :members, [room_name])
-      {:ok, formatted_response("Members: #{inspect(members)}")}
+      {:ok, format_for_room_messages(room_name, "Members: #{inspect(members)}")}
     else
       {:ok,
-       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
+       format_for_room_messages(
+         room_name,
+         "You are not a member of '#{room_name}' or the room does not exist"
+       )}
     end
   end
 
@@ -340,17 +388,28 @@ defmodule Chat.Server.Command do
 
     if Router.is_member?(room_name, me) do
       room = Router.route(room_name, Chat.Room, :inspect, [room_name])
-      {:ok, formatted_response("#{inspect(room)}")}
+      {:ok, format_for_room_messages(room_name, "#{inspect(room)}")}
     else
       {:ok,
-       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
+       format_for_room_messages(
+         room_name,
+         "You are not a member of '#{room_name}' or the room does not exist"
+       )}
     end
   end
 
   def run(_socket, {:get_node, room_name}) do
     case Router.get_node(room_name) do
-      nil -> {:ok, formatted_response("Room '#{room_name}' does not seem to exist on any node")}
-      node_name -> {:ok, formatted_response("Room '#{room_name}' exists on node #{node_name}")}
+      nil ->
+        {:ok,
+         format_for_room_messages(
+           room_name,
+           "Room '#{room_name}' does not seem to exist on any node"
+         )}
+
+      node_name ->
+        {:ok,
+         format_for_room_messages(room_name, "Room '#{room_name}' exists on node #{node_name}")}
     end
   end
 
@@ -367,13 +426,20 @@ defmodule Chat.Server.Command do
           Router.route(room_name, Chat.Room, :delete, [room_name])
         end
 
-        {:ok, formatted_response("Room '#{room_name}' got deleted"), members}
+        {:ok, format_for_room_messages(room_name, "Room '#{room_name}' got deleted"), members}
       else
-        {:ok, formatted_response("You can't delete the room because you are not the admin")}
+        {:ok,
+         format_for_room_messages(
+           room_name,
+           "You can't delete the room because you are not the admin"
+         )}
       end
     else
       {:ok,
-       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
+       format_for_room_messages(
+         room_name,
+         "You are not a member of '#{room_name}' or the room does not exist"
+       )}
     end
   end
 
@@ -385,7 +451,10 @@ defmodule Chat.Server.Command do
        Router.route(room_name, Chat.Room, :members, [room_name])}
     else
       {:ok,
-       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
+       format_for_room_messages(
+         room_name,
+         "You are not a member of '#{room_name}' or the room does not exist"
+       )}
     end
   end
 
@@ -451,6 +520,10 @@ defmodule Chat.Server.Command do
     for room_name <- room_names do
       Router.route(room_name, Chat.Room, :update_member, [room_name, me])
     end
+  end
+
+  defp format_for_room_messages(room_name, message) do
+    "(" <> room_name <> "): " <> "\#\# " <> message <> " \#\#\r\n"
   end
 
   defp formatted_response(string) do
