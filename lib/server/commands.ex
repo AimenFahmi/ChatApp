@@ -177,37 +177,61 @@ defmodule Chat.Server.Command do
       members = Router.route(room_name, Chat.Room, :members, [room_name])
 
       if length(members) == 1 do
-        Router.route(room_name, Chat.Room, :delete, [room_name])
-        {:ok, formatted_response("Deleted room '#{room_name}'"), members}
+        run(socket, {:delete_room, room_name})
       else
-        Router.route(room_name, Chat.Room, :remove_member, [room_name, me])
+        if room_name =~ "@private" do
+          Router.apply_to_all_members(room_name, Chat.Room, :remove_member, [room_name, me])
 
-        if Router.route(room_name, Chat.Room, :is_admin?, [room_name, me]) do
-          description = Router.route(room_name, Chat.Room, :description, [room_name])
-          new_members = Router.route(room_name, Chat.Room, :members, [room_name])
-          new_admin = Enum.at(new_members, 0)
+          if Router.route(room_name, Chat.Room, :is_admin?, [room_name, me]) do
+            new_members = Router.route(room_name, Chat.Room, :members, [room_name])
+            new_admin = Enum.at(new_members, 0)
 
-          Router.route(room_name, Chat.Room, :delete, [room_name])
+            Router.apply_to_all_members(room_name, Chat.Room, :set_admin, [
+              room_name,
+              new_admin
+            ])
 
-          Router.route_to(new_admin.node_name, Chat.Room, :start_link, [
-            room_name,
-            new_admin,
-            "public",
-            description,
-            List.delete(new_members, new_admin)
-          ])
-
-          {:ok,
-           formatted_response(
-             "Removed member '#{inspect({me.user_name, me.user_number})}' from room '#{room_name}' and since the latter was the admin, the room has been moved to node #{
-               inspect(new_admin.node_name)
-             }"
-           ), members}
+            {:ok,
+             formatted_response(
+               "Removed member '#{inspect({me.user_name, me.user_number})}' from room '#{
+                 room_name
+               }'. The admin has been updated to #{inspect(new_admin.node_name)}"
+             ), members}
+          end
         else
-          {:ok,
-           formatted_response(
-             "Removed member '#{inspect({me.user_name, me.user_number})}' from room '#{room_name}'"
-           ), members}
+          Router.route(room_name, Chat.Room, :remove_member, [room_name, me])
+
+          if Router.route(room_name, Chat.Room, :is_admin?, [room_name, me]) do
+            description = Router.route(room_name, Chat.Room, :description, [room_name])
+            new_members = Router.route(room_name, Chat.Room, :members, [room_name])
+            new_admin = Enum.at(new_members, 0)
+
+            Router.route(room_name, Chat.Room, :delete, [room_name])
+
+            Router.route_to(new_admin.node_name, Chat.Room, :start_link, [
+              room_name,
+              new_admin,
+              "public",
+              description,
+              List.delete(new_members, new_admin)
+            ])
+
+            {:ok,
+             formatted_response(
+               "Removed member '#{inspect({me.user_name, me.user_number})}' from room '#{
+                 room_name
+               }' and since the latter was the admin, the room has been moved to node #{
+                 inspect(new_admin.node_name)
+               }"
+             ), members}
+          else
+            {:ok,
+             formatted_response(
+               "Removed member '#{inspect({me.user_name, me.user_number})}' from room '#{
+                 room_name
+               }'"
+             ), members}
+          end
         end
       end
     else
