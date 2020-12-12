@@ -6,12 +6,14 @@ defmodule Chat.Room do
   def start_link(room_name, owner, access, description \\ "Welcome !", members \\ [])
 
   def start_link(room_name, owner, "public", description, members) do
-    case is_valid_room_globally?(room_name) do
+    actual_name = convert_to_public_name(room_name)
+
+    case is_valid_room_globally?(actual_name) do
       true ->
         {:error, :room_already_exists}
 
       false ->
-        name = via_tuple(room_name)
+        name = via_tuple(actual_name)
 
         {:ok, pid} =
           Agent.start_link(
@@ -19,7 +21,7 @@ defmodule Chat.Room do
             name: name
           )
 
-        :global.register_name(%{type: :room, room_name: room_name, node_name: node()}, pid)
+        :global.register_name(%{type: :room, room_name: actual_name, node_name: node()}, pid)
     end
   end
 
@@ -160,6 +162,14 @@ defmodule Chat.Room do
 
   defp via_tuple(room_name) do
     {:via, Registry, {RoomRegistry, room_name}}
+  end
+
+  defp convert_to_public_name(room_name) do
+    if room_name =~ "@public" do
+      room_name
+    else
+      room_name <> "@public"
+    end
   end
 
   defp convert_to_private_name(room_name) do

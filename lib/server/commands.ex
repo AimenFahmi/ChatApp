@@ -1,4 +1,7 @@
 defmodule Chat.Server.Command do
+  @moduledoc """
+
+  """
   alias Chat.Server.Router
 
   require Logger
@@ -46,6 +49,9 @@ defmodule Chat.Server.Command do
 
       ["LIST", "JOINED", "ROOMS"] ->
         {:ok, {:list_joined_rooms}}
+
+      ["LIST", "ACCESSIBLE", "ROOMS"] ->
+        {:ok, {:list_accessible_rooms}}
 
       ["GET", "MYSELF"] ->
         {:ok, {:get_myself}}
