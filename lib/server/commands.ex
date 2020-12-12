@@ -196,7 +196,7 @@ defmodule Chat.Server.Command do
         {:ok,
          format_for_room_messages(
            room_name,
-           "Name '#{room_name}' is taken by an already existing public room."
+           "Name '#{room_name <> "@public"}' is taken by an already existing public room."
          )}
 
       _ ->
@@ -212,7 +212,7 @@ defmodule Chat.Server.Command do
         {:ok,
          format_for_room_messages(
            room_name,
-           "Name '#{room_name}' is taken by an already existing private room."
+           "Name '#{room_name <> "@private"}' is taken by an already existing private room."
          )}
 
       _ ->
