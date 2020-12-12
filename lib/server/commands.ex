@@ -20,6 +20,9 @@ defmodule Chat.Server.Command do
       ["ROOM", room_name, "LEAVE"] ->
         {:ok, {:leave_room, room_name}}
 
+      ["ROOM", room_name, "REMOVE", "MEMBER", user_number] ->
+        {:ok, {:remove_member, room_name, user_number}}
+
       ["ROOM", room_name, "SET", "DESCRIPTION", "TO" | new_description] ->
         {:ok, {:set_room_description, room_name, Enum.join(new_description, " ")}}
 
@@ -58,6 +61,41 @@ defmodule Chat.Server.Command do
 
       _ ->
         {:error, :unknown_command}
+    end
+  end
+
+  def run(socket, {:remove_member, room_name, user_number}) do
+    me = Chat.get_user_by_socket(socket)
+
+    if Router.is_member?(room_name, me) do
+      if Router.is_admin?(room_name, me) do
+        if me.user_number == user_number do
+          if Chat.User.is_valid_user?(user_number) do
+            user = Chat.User.get_user(user_number)
+
+            if room_name =~ "@private" do
+              Router.apply_to_all_members(room_name, Chat.Room, :remove_member, [room_name, user])
+            else
+              Router.route(room_name, Chat.Room, :remove_member, [room_name, user])
+            end
+
+            {:ok, formatted_response("Removed user '#{user_number}' from room '#{room_name}'")}
+          else
+            {:ok, formatted_response("User '#{user_number}' does not exist")}
+          end
+        else
+          {:ok,
+           formatted_response("If you want to leave the room please use: ROOM #{room_name} LEAVE")}
+        end
+      else
+        {:ok,
+         formatted_response(
+           "You cannot remove a member because you are not the admin of this room"
+         )}
+      end
+    else
+      {:ok,
+       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
     end
   end
 
@@ -129,7 +167,8 @@ defmodule Chat.Server.Command do
 
     case Chat.Room.start_link(room_name, me, "public") do
       {:error, :room_already_exists} ->
-        {:ok, formatted_response("Public room '#{room_name}' already exists")}
+        {:ok,
+         formatted_response("Name '#{room_name}' is taken by an already existing public room.")}
 
       _ ->
         {:ok, formatted_response("Created public room '#{room_name}'")}
@@ -141,7 +180,8 @@ defmodule Chat.Server.Command do
 
     case Chat.Room.start_link(room_name, me, "private") do
       {:error, :room_already_exists} ->
-        {:ok, formatted_response("Private room '#{room_name}' already exists")}
+        {:ok,
+         formatted_response("Name '#{room_name}' is taken by an already existing private room.")}
 
       _ ->
         {:ok, formatted_response("Created private room '#{room_name}'")}
@@ -260,7 +300,7 @@ defmodule Chat.Server.Command do
       else
         {:ok,
          formatted_response(
-           "You can't set the description because you are not the admin of this group"
+           "You can't set the description because you are not the admin of this room"
          )}
       end
     else

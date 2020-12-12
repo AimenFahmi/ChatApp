@@ -54,7 +54,7 @@ defmodule Chat.User do
     :global.whereis_name(%{type: :user, user_number: user_number})
   end
 
-  defp is_valid_user?(user_number) do
+  def is_valid_user?(user_number) do
     Enum.any?(:global.registered_names(), fn registered_name ->
       registered_name.type == :user && registered_name.user_number == user_number
     end)
