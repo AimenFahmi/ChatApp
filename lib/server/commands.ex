@@ -75,7 +75,7 @@ defmodule Chat.Server.Command do
 
     if Router.is_member?(room_name, me) do
       if Router.is_admin?(room_name, me) do
-        if !me.user_number == user_number do
+        if !(me.user_number == user_number) do
           if Chat.User.is_valid_user?(user_number) do
             user = Chat.User.get_user(user_number)
 
