@@ -58,4 +58,13 @@ defmodule Chat.Server.Router do
       end)
     end)
   end
+
+  def apply_to_all_members(room_name, mod, fun, args) do
+    members = route(room_name, Chat.Room, :members, [room_name])
+    Enum.each(members, fn member -> route_to(member.node_name, mod, fun, args) end)
+  end
+
+  def is_member_by_number?(room_name, user_number) do
+    route(room_name, Chat.Room, :is_member_by_number?, [room_name, user_number])
+  end
 end

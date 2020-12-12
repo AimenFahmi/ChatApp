@@ -335,16 +335,17 @@ defmodule Chat.Server.Command do
     room_names =
       for registered_name <- :global.registered_names(),
           registered_name.type == :room,
-          Enum.member?(
-            Router.route(registered_name.room_name, Chat.Room, :is_member_by_number?, [
-              registered_name.room_name,
-              me.user_number
-            ]),
-            me
-          ),
+          Router.is_member_by_number?(registered_name.room_name, me.user_number),
           do: registered_name.room_name
 
-    Logger.info("Updated: #{inspect(room_names)}")
+    private_rooms = Chat.rooms()
+
+    for private_room <- private_rooms,
+        Router.is_member_by_number?(private_room, me.user_number) do
+      Router.apply_to_all_members(private_room, Chat.Room, :update_member, [private_room, me])
+    end
+
+    Logger.info("Updated: #{inspect([private_rooms | room_names])}")
 
     for room_name <- room_names do
       Router.route(room_name, Chat.Room, :update_member, [room_name, me])
