@@ -1,0 +1,11 @@
+{application,chatapp,
+             [{applications,[kernel,stdlib,elixir,logger]},
+              {description,"chatapp"},
+              {modules,['Elixir.Chat','Elixir.Chat.Room','Elixir.Chat.Server',
+                        'Elixir.Chat.Server.Command',
+                        'Elixir.Chat.Server.Router',
+                        'Elixir.Chat.Server.Supervisor',
+                        'Elixir.Chat.Supervisor','Elixir.Chat.User']},
+              {registered,[]},
+              {vsn,"0.1.0"},
+              {mod,{'Elixir.Chat',[]}}]}.
