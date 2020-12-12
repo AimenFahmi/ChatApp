@@ -532,7 +532,7 @@ defmodule Chat.Server.Command do
       ])
     end
 
-    Logger.info("Updated: #{inspect([private_rooms | room_names])}")
+    Logger.info("Updated: #{inspect(List.flatten([private_rooms | room_names]))}")
 
     for room_name <- room_names do
       Router.route(room_name, Chat.Room, :update_member, [room_name, me])
