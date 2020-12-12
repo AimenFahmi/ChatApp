@@ -64,6 +64,14 @@ defmodule Chat.Server.Router do
     Enum.each(members, fn member -> route_to(member.node_name, mod, fun, args) end)
   end
 
+  def is_admin?(room_name, user) do
+    if room_name =~ "@private" do
+      Chat.Room.is_admin?(room_name, user)
+    else
+      route(room_name, Chat.Room, :is_admin?, [room_name, user])
+    end
+  end
+
   def is_member_by_number?(room_name, user_number) do
     if room_name =~ "@private" do
       Chat.Room.is_member_by_number?(room_name, user_number)

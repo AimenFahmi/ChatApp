@@ -281,9 +281,18 @@ defmodule Chat.Server.Command do
 
     if Router.is_member?(room_name, me) do
       members = Router.route(room_name, Chat.Room, :members, [room_name])
-      Router.route(room_name, Chat.Room, :delete, [room_name])
 
-      {:ok, formatted_response("Room '#{room_name}' got deleted"), members}
+      if Router.route(room_name, Chat.Room, :is_admin?, [room_name, me]) do
+        if room_name =~ "@private" do
+          Router.apply_to_all_members(room_name, Chat.Room, :delete, [room_name])
+        else
+          Router.route(room_name, Chat.Room, :delete, [room_name])
+        end
+
+        {:ok, formatted_response("Room '#{room_name}' got deleted"), members}
+      else
+        {:ok, formatted_response("You can't delete the room because you are not the admin")}
+      end
     else
       {:ok,
        formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
@@ -326,7 +335,7 @@ defmodule Chat.Server.Command do
   def run(socket, {:list_joined_rooms}) do
     me = Chat.get_user_by_socket(socket)
 
-    room_names =
+    public_rooms =
       for registered_name <- :global.registered_names(),
           registered_name.type == :room,
           Enum.member?(
@@ -337,7 +346,9 @@ defmodule Chat.Server.Command do
           ),
           do: registered_name.room_name
 
-    {:ok, formatted_response("#{inspect(room_names)}")}
+    private_rooms = for room <- Chat.rooms(), do: room.room_name
+
+    {:ok, formatted_response("#{inspect([private_rooms | public_rooms])}")}
   end
 
   def update_joined_rooms(me) do
