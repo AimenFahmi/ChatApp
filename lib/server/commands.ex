@@ -220,11 +220,25 @@ defmodule Chat.Server.Command do
     me = Chat.get_user_by_socket(socket)
 
     if Router.is_member?(room_name, me) do
-      Router.route(room_name, Chat.Room, :set_description, [room_name, new_description])
+      if Router.is_admin?(room_name, me) do
+        if room_name =~ "@private" do
+          Router.apply_to_all_members(room_name, Chat.Room, :set_description, [
+            room_name,
+            new_description
+          ])
+        else
+          Router.route(room_name, Chat.Room, :set_description, [room_name, new_description])
+        end
 
-      {:ok,
-       formatted_response("Description of room '#{room_name}' was set to '#{new_description}'"),
-       Router.route(room_name, Chat.Room, :members, [room_name])}
+        {:ok,
+         formatted_response("Description of room '#{room_name}' was set to '#{new_description}'"),
+         Router.route(room_name, Chat.Room, :members, [room_name])}
+      else
+        {:ok,
+         formatted_response(
+           "You can't set the description because you are not the admin of this group"
+         )}
+      end
     else
       {:ok,
        formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
