@@ -24,7 +24,7 @@ defmodule Chat.Room do
   end
 
   def start_link(room_name, owner, "private", description, members) do
-    actual_name = room_name <> "@private"
+    actual_name = convert_to_private_name(room_name)
 
     case is_valid_room_locally?(actual_name) do
       true ->
@@ -160,5 +160,13 @@ defmodule Chat.Room do
 
   defp via_tuple(room_name) do
     {:via, Registry, {RoomRegistry, room_name}}
+  end
+
+  defp convert_to_private_name(room_name) do
+    if room_name =~ "@private" do
+      room_name
+    else
+      room_name <> "@private"
+    end
   end
 end
