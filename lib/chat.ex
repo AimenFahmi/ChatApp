@@ -17,6 +17,10 @@ defmodule Chat do
     ])
   end
 
+  def private_rooms do
+    Enum.filter(rooms(), fn room -> room.room_name =~ "@private" end)
+  end
+
   def inspect_rooms do
     Enum.map(Chat.rooms(), fn room -> Chat.Room.inspect(room.room_name) end)
   end

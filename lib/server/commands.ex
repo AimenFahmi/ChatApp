@@ -499,9 +499,20 @@ defmodule Chat.Server.Command do
           ),
           do: registered_name.room_name
 
-    private_rooms = for room <- Chat.rooms(), do: room.room_name
+    private_rooms =
+      for room <- Enum.filter(Chat.rooms(), fn room -> room.room_name =~ "@private" end),
+          do: room.room_name
 
-    {:ok, formatted_response("#{inspect([private_rooms | public_rooms])}")}
+    {:ok, formatted_response("#{inspect(List.flatten([private_rooms | public_rooms]))}")}
+  end
+
+  def run(_socket, {:list_accessible_rooms}) do
+    public_rooms =
+      for registered_name <- :global.registered_names(),
+          registered_name.type == :room,
+          do: registered_name.room_name
+
+    {:ok, formatted_response("#{inspect(List.flatten([public_rooms]))}")}
   end
 
   def update_joined_rooms(me) do
@@ -511,7 +522,7 @@ defmodule Chat.Server.Command do
           Router.is_member_by_number?(registered_name.room_name, me.user_number),
           do: registered_name.room_name
 
-    private_rooms = Chat.rooms()
+    private_rooms = Enum.filter(Chat.rooms(), fn room -> room.room_name =~ "@private" end)
 
     for private_room <- private_rooms,
         Router.is_member_by_number?(private_room.room_name, me.user_number) do
