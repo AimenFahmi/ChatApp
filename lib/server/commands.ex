@@ -1,5 +1,63 @@
 defmodule Chat.Server.Command do
   @moduledoc """
+  Module responsible of parsing and running the servers incoming commands.
+
+  ## Commands
+
+  The following commands can be written to the server on `PORT 4040`.
+
+  * `LOGIN user_number user_name` the users number, name, node name and socket
+    are stored in a global registry which can be accessed by any node.
+
+  * `CREATE ROOM room_name` creates a public room on the admins node. The room
+  can be joined by any user on the system. The admin is set to the user who has
+  created the room.
+
+  * `CREATE PRIVATE ROOM room_name` creates a private room on the admins node
+  which cannot be 'JOIN'ed by anyone. Instead, a member of the room can 'INVITE'
+  others to it. The admin is set to the user who has created the room.
+
+  * `JOIN ROOM room_name` adds the user to the appropriate room.
+
+  * `ROOM room_name LEAVE` removes the user from the room.
+
+  * `ROOM room_name REMOVE MEMBER user_number` removes the appropriate user from
+  the room. **Only the admin can make use of this command**.
+
+  * `ROOM room_name SET DESCRIPTION TO new_description` sets the description of
+  the room to `new_description`. **Only the admin can make use of this command**.
+
+  * `ROOM room_name GET DESCRIPTION` returns the description of the room
+
+  * `ROOM room_name GET MEMBERS` returns a list of all the members of the room
+
+  * `ROOM room_name INSPECT` returns the internal representation of the room
+  (namely an `Elixir.Map`)
+
+  * `ROOM room_name ON WHICH NODE ?` returns the node on which the public room
+  exists.
+
+  * `ROOM room_name DELETE` deletes the room. **Only the admin can makes use of
+  this command**.
+
+  * `ROOM room_name SEND message` send the message to all members of the room.
+
+  * `ROOM room_name INVTE user_number` adds the `INVITE`ed user to the room. If
+  it is private, a copy of that room will be started on the new users node.
+
+  * `LIST JOINED ROOMS` returns a list containing all the joined rooms (private
+  and public)
+
+  * `LIST ACCESSIBLE ROOMS` returns a list of all the public rooms on the system
+
+  * `GET MYSELF` returns the internal representation of the user (namely as an
+  `Elixir.Map`)
+
+  * `SET MY DESCRIPTION TO new_description` sets the description of the user to
+  `new_description` and updates all the rooms containing the user to mirror the change.
+
+  * `SET MY USER NAME TO new_user_name` sets the name of the user to
+  `new_user_name` and updates all the rooms containing the user to mirror the change.
 
   """
   alias Chat.Server.Router
@@ -457,14 +515,11 @@ defmodule Chat.Server.Command do
     me = Chat.get_user_by_socket(socket)
 
     if Router.is_member?(room_name, me) do
-      {:ok, "#{me.user_name} (#{room_name}): " <> message <> "\r\n",
+      {:ok, format_for_room_messages(room_name, message),
        Router.route(room_name, Chat.Room, :members, [room_name])}
     else
       {:ok,
-       format_for_room_messages(
-         room_name,
-         "You are not a member of '#{room_name}' or the room does not exist"
-       )}
+       formatted_response("You are not a member of '#{room_name}' or the room does not exist")}
     end
   end
 
