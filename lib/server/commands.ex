@@ -123,9 +123,45 @@ defmodule Chat.Server.Command do
       ["ROOM", room_name, "INVITE", user_number] ->
         {:ok, {:invite_user, room_name, user_number}}
 
+      ["LOG", "OUT"] ->
+        {:ok, {:log_out}}
+
       _ ->
         {:error, :unknown_command}
     end
+  end
+
+  def run(socket, {:log_out}) do
+    me = Chat.get_user_by_socket(socket)
+
+    public_rooms =
+      for registered_name <- :global.registered_names(),
+          registered_name.type == :room,
+          Enum.member?(
+            Router.route(registered_name.room_name, Chat.Room, :members, [
+              registered_name.room_name
+            ]),
+            me
+          ),
+          do: registered_name.room_name
+
+    private_rooms =
+      for room <- Enum.filter(Chat.rooms(), fn room -> room.room_name =~ "@private" end),
+          do: room.room_name
+
+    joined_rooms = List.flatten([private_rooms | public_rooms])
+
+    for joined_room <- joined_rooms do
+      if joined_room =~ "@private" do
+        Router.apply_to_all_members(joined_room, Chat.Room, :remove_member, [joined_room, me])
+      else
+        Router.route(joined_room, Chat.Room, :remove_member, [joined_room, me])
+      end
+    end
+
+    user_name = me.user_name
+    Chat.User.delete(me.user_number)
+    {:ok, formatted_response("See you soon #{user_name}")}
   end
 
   def run(socket, {:remove_member, room_name, user_number}) do
@@ -134,7 +170,7 @@ defmodule Chat.Server.Command do
     if Router.is_member?(room_name, me) do
       if Router.is_admin?(room_name, me) do
         if !(me.user_number == user_number) do
-          if Chat.User.is_valid_user?(user_number) do
+          if Chat.User.is_logged_in?(user_number) do
             user = Chat.User.get_user(user_number)
 
             if room_name =~ "@private" do
@@ -236,13 +272,28 @@ defmodule Chat.Server.Command do
     end
   end
 
-  def run(socket, {:login, user_number, user_name}) do
-    case Chat.User.start_link(user_number, user_name, node(), socket) do
-      {:error, :user_already_logged_in} ->
-        {:ok, formatted_response("You are already logged in")}
+  @doc """
 
-      _ ->
-        {:ok, formatted_response("We welcome the glorious #{user_name} !")}
+  """
+  def run(socket, {:login, user_number, user_name}) do
+    if String.match?(user_number, ~r/(\+41|0)78\d{7}/) do
+      case Chat.User.start_link(user_number, user_name, node(), socket) do
+        {:error, :user_already_logged_in} ->
+          {:ok, formatted_response("You are already logged in")}
+
+        {:error, :someone_else_already_logged_in, current_user_on_socket} ->
+          {:ok,
+           formatted_response(
+             "You are currently logged in as #{
+               inspect({current_user_on_socket.user_name, current_user_on_socket.user_number})
+             }. You can log out using: LOG OUT"
+           )}
+
+        _ ->
+          {:ok, formatted_response("We welcome the glorious #{user_name} !")}
+      end
+    else
+      {:ok, formatted_response("The number has the wrong format")}
     end
   end
 

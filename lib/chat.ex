@@ -1,5 +1,6 @@
 defmodule Chat do
   use Application
+  require Logger
 
   @impl true
   def start(_type, _args) do
@@ -37,6 +38,9 @@ defmodule Chat do
 
   def get_user_by_socket(socket) do
     users = Chat.inspect_users()
-    Enum.find(users, fn user -> user.socket == socket end)
+
+    Enum.find(users, fn user ->
+      user.socket == socket
+    end)
   end
 end

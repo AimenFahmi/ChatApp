@@ -59,9 +59,13 @@ defmodule Chat.Room do
   def remove_member(room_name, member) do
     if is_valid_room_locally?(room_name) do
       if is_member?(room_name, member) do
-        Agent.update(via_tuple(room_name), fn room ->
-          %{room | members: List.delete(room.members, member)}
-        end)
+        if length(members(room_name)) == 1 do
+          delete(room_name)
+        else
+          Agent.update(via_tuple(room_name), fn room ->
+            %{room | members: List.delete(room.members, member)}
+          end)
+        end
       else
         {:error, :member_not_found}
       end
