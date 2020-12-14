@@ -5,7 +5,7 @@ defmodule Chat.Server.Command do
   This is the most important module because it is the one implementing the
   architecture of the whole application. It is in this module that the choices
   are made on how to approach problems such as creating rooms, deleting them,
-  joining them, leaving them... 
+  joining them, leaving them...
 
   ## Commands
 
@@ -281,25 +281,26 @@ defmodule Chat.Server.Command do
 
   """
   def run(socket, {:login, user_number, user_name}) do
-    if String.match?(user_number, ~r/(\+41|0)78\d{7}/) do
-      case Chat.User.start_link(user_number, user_name, node(), socket) do
-        {:error, :user_already_logged_in} ->
-          {:ok, formatted_response("You are already logged in")}
+    # if String.match?(user_number, ~r/(\+41|0)78\d{7}/) do
+    case Chat.User.start_link(user_number, user_name, node(), socket) do
+      {:error, :user_already_logged_in} ->
+        {:ok, formatted_response("You are already logged in")}
 
-        {:error, :someone_else_already_logged_in, current_user_on_socket} ->
-          {:ok,
-           formatted_response(
-             "You are currently logged in as #{
-               inspect({current_user_on_socket.user_name, current_user_on_socket.user_number})
-             }. You can log out using: LOG OUT"
-           )}
+      {:error, :someone_else_already_logged_in, current_user_on_socket} ->
+        {:ok,
+         formatted_response(
+           "You are currently logged in as #{
+             inspect({current_user_on_socket.user_name, current_user_on_socket.user_number})
+           }. You can log out using: LOG OUT"
+         )}
 
-        _ ->
-          {:ok, formatted_response("We welcome the glorious #{user_name} !")}
-      end
-    else
-      {:ok, formatted_response("The number has the wrong format")}
+      _ ->
+        {:ok, formatted_response("We welcome the glorious #{user_name} !")}
     end
+
+    # else
+    #  {:ok, formatted_response("The number has the wrong format")}
+    # end
   end
 
   def run(socket, {:create_public_room, room_name}) do
