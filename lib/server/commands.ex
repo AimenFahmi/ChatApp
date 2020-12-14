@@ -572,7 +572,7 @@ defmodule Chat.Server.Command do
     me = Chat.get_user_by_socket(socket)
 
     if Router.is_member?(room_name, me) do
-      {:ok, format_for_room_messages(room_name, message),
+      {:ok, "#{me.user_name} (#{room_name}): #{message}",
        Router.route(room_name, Chat.Room, :members, [room_name])}
     else
       {:ok,
