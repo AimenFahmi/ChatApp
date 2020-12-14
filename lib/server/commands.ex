@@ -2,6 +2,11 @@ defmodule Chat.Server.Command do
   @moduledoc """
   Module responsible of parsing and running the servers incoming commands.
 
+  This is the most important module because it is the one implementing the
+  architecture of the whole application. It is in this module that the choices
+  are made on how to approach problems such as creating rooms, deleting them,
+  joining them, leaving them... 
+
   ## Commands
 
   The following commands can be written to the server on `PORT 4040`.

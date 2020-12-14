@@ -1,15 +1,15 @@
 defmodule Chat.Server do
   require Logger
 
-  def accept(_port) do
+  def accept(port) do
     {:ok, socket} =
       :gen_tcp.listen(
-        0,
+        port,
         [:binary, packet: :line, active: false, reuseaddr: true]
       )
 
-    {:ok, my_port} = :inet.port(socket)
-    Logger.info("Accepting connections on port #{my_port}")
+    # {:ok, my_port} = :inet.port(socket)
+    Logger.info("Accepting connections on port #{port}")
     loop_acceptor(socket)
   end
 
@@ -26,7 +26,7 @@ defmodule Chat.Server do
     msg =
       with {:ok, data} <- read_line(socket),
            {:ok, command} <- Chat.Server.Command.parse(data),
-           true <- (logged_in? || (!logged_in? && (elem(command,0) == :login))),
+           true <- logged_in? || (!logged_in? && elem(command, 0) == :login),
            do: Chat.Server.Command.run(socket, command)
 
     if msg == false do

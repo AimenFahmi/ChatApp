@@ -39,6 +39,8 @@ defmodule Chat do
   def get_user_by_socket(socket) do
     users = Chat.inspect_users()
 
+    Logger.info("#{inspect(users)}")
+
     Enum.find(users, fn user ->
       user.socket == socket
     end)
